@@ -260,7 +260,7 @@ module EpochBoundary {
         // set with at least 66% liveliness. 
         proposed_set
     }
-
+    
     fun reset_counters(
         vm: &signer,
         proposed_set: vector<address>,

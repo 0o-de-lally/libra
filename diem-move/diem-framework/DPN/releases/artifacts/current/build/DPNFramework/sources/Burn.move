@@ -44,7 +44,6 @@ module Burn {
       let cumu = *Vector::borrow(&deposit_vec, k);
 
       let ratio = FixedPoint32::create_from_rational(cumu, global_deposits);
-      print(&ratio);
 
       Vector::push_back(&mut ratios_vec, ratio);
       k = k + 1;
@@ -77,18 +76,13 @@ module Burn {
       return 0;
 
     let d = borrow_global<DepositInfo>(@VMReserved);
-    let contains = Vector::contains(&d.addr, &payee);
-    print(&contains);
+    let _contains = Vector::contains(&d.addr, &payee);
     let (is_found, i) = Vector::index_of(&d.addr, &payee);
     if (is_found) {
-      print(&is_found);
       let len = Vector::length(&d.ratio);
-      print(&i);
-      print(&len);
       if (i + 1 > len) return 0;
       let ratio = *Vector::borrow(&d.ratio, i);
       if (FixedPoint32::is_zero(copy ratio)) return 0;
-      print(&ratio);
       return FixedPoint32::multiply_u64(value, ratio)
     };
 
@@ -99,7 +93,6 @@ module Burn {
     vm: &signer, payer: address, value: u64
   ) acquires DepositInfo, BurnPreference {
     CoreAddresses::assert_vm(vm);
-
     if (exists<BurnPreference>(payer)) {
       if (borrow_global<BurnPreference>(payer).send_community) {
         return send(vm, payer, value)
@@ -124,19 +117,22 @@ module Burn {
   fun send(vm: &signer, payer: address, value: u64) acquires DepositInfo {
     let list = get_address_list();
     let len = Vector::length<address>(&list);
-    print(&list);
-    
+
+
+    let total_coin_value_to_recycle = Diem::value(coin);
+
     // There could be errors in the array, and underpayment happen.
     let value_sent = 0;
 
     let i = 0;
     while (i < len) {
+
       let payee = *Vector::borrow<address>(&list, i);
-      print(&payee);
-      let val = get_value(payee, value);
-      print(&val);
-      
-      DiemAccount::vm_make_payment_no_limit<GAS>(
+      let amount_to_payee = get_payee_value(payee, total_coin_value_to_recycle);
+      let to_deposit = Diem::withdraw(coin, amount_to_payee);
+
+      DiemAccount::vm_deposit_with_metadata<GAS>(
+          vm,
           payer,
           payee,
           val,

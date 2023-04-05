@@ -129,7 +129,10 @@ module EpochBoundary {
             Subsidy::process_subsidy(vm, subsidy_units, &outgoing_compliant_set);
         };
 
-        Subsidy::process_fees(vm, &outgoing_compliant_set);
+        // after everyone is paid from the chain's Fee account
+        // we can burn the excess fees from the epoch
+        Burn::reset_ratios(vm);
+        Burn::epoch_burn_fees(vm);
     }
 
     fun propose_new_set(vm: &signer, height_start: u64, height_now: u64): vector<address> 
@@ -260,7 +263,7 @@ module EpochBoundary {
         // set with at least 66% liveliness. 
         proposed_set
     }
-
+    
     fun reset_counters(
         vm: &signer,
         proposed_set: vector<address>,

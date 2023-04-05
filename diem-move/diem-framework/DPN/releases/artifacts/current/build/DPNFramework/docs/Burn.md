@@ -95,6 +95,56 @@
 
 </details>
 
+<a name="0x1_Burn_epoch_burn_fees"></a>
+
+## Function `epoch_burn_fees`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="Burn.md#0x1_Burn_epoch_burn_fees">epoch_burn_fees</a>(vm: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="Burn.md#0x1_Burn_epoch_burn_fees">epoch_burn_fees</a>(
+    vm: &signer,
+)  <b>acquires</b> <a href="Burn.md#0x1_Burn_BurnPreference">BurnPreference</a>, <a href="Burn.md#0x1_Burn_DepositInfo">DepositInfo</a> {
+    <a href="CoreAddresses.md#0x1_CoreAddresses_assert_vm">CoreAddresses::assert_vm</a>(vm);
+
+    // extract fees
+    <b>let</b> coins = <a href="TransactionFee.md#0x1_TransactionFee_vm_withdraw_all_coins">TransactionFee::vm_withdraw_all_coins</a>&lt;<a href="GAS.md#0x1_GAS">GAS</a>&gt;(vm);
+
+    // get the list of fee makers
+    <b>let</b> fee_makers = <a href="TransactionFee.md#0x1_TransactionFee_get_fee_makers">TransactionFee::get_fee_makers</a>();
+
+    <b>let</b> len = <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&fee_makers);
+
+    // for every user in the list burn their fees per <a href="Burn.md#0x1_Burn">Burn</a>.<b>move</b> preferences
+    <b>let</b> i = 0;
+    <b>while</b> (i &lt; len) {
+        <b>let</b> user = <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&fee_makers, i);
+        <b>let</b> amount = <a href="TransactionFee.md#0x1_TransactionFee_get_epoch_fees_made">TransactionFee::get_epoch_fees_made</a>(*user);
+        <b>let</b> user_share = <a href="Diem.md#0x1_Diem_withdraw">Diem::withdraw</a>(&<b>mut</b> coins, amount);
+        <a href="Burn.md#0x1_Burn_burn_or_recycle_user_fees">burn_or_recycle_user_fees</a>(vm, *user, user_share);
+
+        i = i + 1;
+    };
+
+  // Transaction fee account should be empty at the end of the epoch
+  // Superman 3 decimal errors. https://www.youtube.com/watch?v=N7JBXGkBoFc
+  // anything that is remaining should be burned
+  <a href="Diem.md#0x1_Diem_vm_burn_this_coin">Diem::vm_burn_this_coin</a>(vm, coins);
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_Burn_reset_ratios"></a>
 
 ## Function `reset_ratios`
@@ -135,7 +185,7 @@
     <b>let</b> cumu = *<a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&deposit_vec, k);
 
     <b>let</b> ratio = <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(cumu, global_deposits);
-    print(&ratio);
+    // print(&ratio);
 
     <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> ratios_vec, ratio);
     k = k + 1;
@@ -207,18 +257,18 @@
     <b>return</b> 0;
 
   <b>let</b> d = <b>borrow_global</b>&lt;<a href="Burn.md#0x1_Burn_DepositInfo">DepositInfo</a>&gt;(@VMReserved);
-  <b>let</b> contains = <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_contains">Vector::contains</a>(&d.addr, &payee);
-  print(&contains);
+  <b>let</b> _contains = <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_contains">Vector::contains</a>(&d.addr, &payee);
+  // print(&contains);
   <b>let</b> (is_found, i) = <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_index_of">Vector::index_of</a>(&d.addr, &payee);
   <b>if</b> (is_found) {
-    print(&is_found);
+    // print(&is_found);
     <b>let</b> len = <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>(&d.ratio);
-    print(&i);
-    print(&len);
+    // print(&i);
+    // print(&len);
     <b>if</b> (i + 1 &gt; len) <b>return</b> 0;
     <b>let</b> ratio = *<a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&d.ratio, i);
     <b>if</b> (<a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32_is_zero">FixedPoint32::is_zero</a>(<b>copy</b> ratio)) <b>return</b> 0;
-    print(&ratio);
+    // print(&ratio);
     <b>return</b> <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/FixedPoint32.md#0x1_FixedPoint32_multiply_u64">FixedPoint32::multiply_u64</a>(value, ratio)
   };
 
@@ -249,7 +299,6 @@
   vm: &signer, payer: <b>address</b>, value: u64
 ) <b>acquires</b> <a href="Burn.md#0x1_Burn_DepositInfo">DepositInfo</a>, <a href="Burn.md#0x1_Burn_BurnPreference">BurnPreference</a> {
   <a href="CoreAddresses.md#0x1_CoreAddresses_assert_vm">CoreAddresses::assert_vm</a>(vm);
-
   <b>if</b> (<b>exists</b>&lt;<a href="Burn.md#0x1_Burn_BurnPreference">BurnPreference</a>&gt;(payer)) {
     <b>if</b> (<b>borrow_global</b>&lt;<a href="Burn.md#0x1_Burn_BurnPreference">BurnPreference</a>&gt;(payer).send_community) {
       <b>return</b> <a href="Burn.md#0x1_Burn_send">send</a>(vm, payer, value)
@@ -313,19 +362,25 @@
 <pre><code><b>fun</b> <a href="Burn.md#0x1_Burn_send">send</a>(vm: &signer, payer: <b>address</b>, value: u64) <b>acquires</b> <a href="Burn.md#0x1_Burn_DepositInfo">DepositInfo</a> {
   <b>let</b> list = <a href="Burn.md#0x1_Burn_get_address_list">get_address_list</a>();
   <b>let</b> len = <a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_length">Vector::length</a>&lt;<b>address</b>&gt;(&list);
-  print(&list);
+
+  <b>let</b> total_coin_value_to_recycle = <a href="Diem.md#0x1_Diem_value">Diem::value</a>(coin);
+  // print(&list);
 
   // There could be errors in the array, and underpayment happen.
   <b>let</b> value_sent = 0;
 
   <b>let</b> i = 0;
   <b>while</b> (i &lt; len) {
-    <b>let</b> payee = *<a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>&lt;<b>address</b>&gt;(&list, i);
-    print(&payee);
-    <b>let</b> val = <a href="Burn.md#0x1_Burn_get_value">get_value</a>(payee, value);
-    print(&val);
 
-    <a href="DiemAccount.md#0x1_DiemAccount_vm_make_payment_no_limit">DiemAccount::vm_make_payment_no_limit</a>&lt;<a href="GAS.md#0x1_GAS">GAS</a>&gt;(
+    <b>let</b> payee = *<a href="../../../../../../../DPN/releases/artifacts/current/build/MoveStdlib/docs/Vector.md#0x1_Vector_borrow">Vector::borrow</a>&lt;<b>address</b>&gt;(&list, i);
+    // print(&payee);
+    <b>let</b> amount_to_payee = <a href="Burn.md#0x1_Burn_get_payee_value">get_payee_value</a>(payee, total_coin_value_to_recycle);
+    // print(&val);
+
+    <b>let</b> to_deposit = <a href="Diem.md#0x1_Diem_withdraw">Diem::withdraw</a>(coin, amount_to_payee);
+
+    <a href="DiemAccount.md#0x1_DiemAccount_vm_deposit_with_metadata">DiemAccount::vm_deposit_with_metadata</a>&lt;<a href="GAS.md#0x1_GAS">GAS</a>&gt;(
+        vm,
         payer,
         payee,
         val,

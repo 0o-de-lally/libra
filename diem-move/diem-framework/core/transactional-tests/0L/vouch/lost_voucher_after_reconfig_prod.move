@@ -30,16 +30,15 @@ script {
     use DiemFramework::Vouch;
     use Std::Vector;
     use DiemFramework::EpochBoundary;
-    use DiemFramework::Debug::print;
+    // use DiemFramework::Debug::print;
+    use DiemFramework::ProofOfFee;
+    use DiemFramework::DiemSystem;
 
-    fun main(vm: signer, _: signer) {
-        Mock::mock_case_1(&vm, @Alice, 0, 15);
-        Mock::mock_case_1(&vm, @Bob, 0, 15);
-        Mock::mock_case_1(&vm, @Carol, 0, 15);
-        Mock::mock_case_1(&vm, @Dave, 0, 15);
-        // EVE will be the case 4
-        Mock::mock_case_1(&vm, @Frank, 0, 15);
-        Mock::mock_case_1(&vm, @Gertie, 0, 15);
+    fun main(vm: signer, eve_sig: signer) {
+        // give the nodes bids
+        Mock::pof_default(&vm);
+        // make the nodes compliant
+        Mock::all_good_validators(&vm);
 
         // mock some vals vouching for Alice, including Eve.
         let v = Vector::singleton<address>(@Bob);
@@ -59,6 +58,7 @@ script {
         let c = Vouch::buddies_in_set(@Alice);
         print(&c);
         let len = Vector::length(&c);
+        // print(&len);
         assert!(len == 1, 735702);
     }
 }
